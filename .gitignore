@@ -1,0 +1,16 @@
+# Datasets folder
+datasets/*
+
+# Outputs folder
+outputs/
+
+# 3rd party files
+src/3rdparty
+
+# Temporary files
+*.pyc
+__pycache__/
+
+# Python package caches
+dist/
+*.egg-info/

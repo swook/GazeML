@@ -1,0 +1,6 @@
+[flake8]
+doctests = True
+enable-extensions = docstrings
+max-line-length = 100
+statistics = True
+show-source = True
