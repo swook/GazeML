@@ -1,4 +1,4 @@
-"""UnityEyes data source for gaze estimation."""
+"""Data source of stream of frames."""
 import bz2
 import dlib
 import queue
@@ -71,7 +71,7 @@ class FramesSource(BaseDataSource):
         raise NotImplementedError('Frames::frame_generator not implemented.')
 
     def entry_generator(self, yield_just_one=False):
-        """Read frame from webcam."""
+        """Generate eye image entries by detecting faces and facial landmarks."""
         try:
             while range(1) if yield_just_one else True:
                 # Grab frame
@@ -121,7 +121,7 @@ class FramesSource(BaseDataSource):
             pass
 
     def preprocess_entry(self, entry):
-        """Detect facial landmarks to segment eyes and calculate gaze direction."""
+        """Preprocess segmented eye images for use as neural network input."""
         eye = entry['eye']
         eye = cv.equalizeHist(eye)
         eye = eye.astype(np.float32)
