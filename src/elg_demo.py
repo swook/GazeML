@@ -273,7 +273,7 @@ if __name__ == '__main__':
                         # )
 
                         # Draw "gaze"
-                        # from models.hg_gaze import estimate_gaze_from_landmarks
+                        # from models.elg import estimate_gaze_from_landmarks
                         # current_gaze = estimate_gaze_from_landmarks(
                         #     iris_landmarks, iris_centre, eyeball_centre, eyeball_radius)
                         i_x0, i_y0 = iris_centre
