@@ -296,6 +296,6 @@ class UnityEyes(BaseDataSource):
                 for landmark in entry['landmarks']
             ]).astype(np.float32)
             if self.data_format == 'NHWC':
-                np.transpose(entry['heatmaps'], (1, 2, 0))
+                entry['heatmaps'] = np.transpose(entry['heatmaps'], (1, 2, 0))
 
         return entry
