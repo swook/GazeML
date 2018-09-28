@@ -75,7 +75,10 @@ class ELG(BaseModel):
         with tf.variable_scope('hourglass'):
             # TODO: Find better way to specify no. landmarks
             if y1 is not None:
-                self._hg_num_landmarks = y1.shape.as_list()[1]
+                if self._data_format == 'NCHW':
+		    self._hg_num_landmarks = y1.shape.as_list()[1]
+                if self._data_format == 'NHWC':
+		    self._hg_num_landmarks = y1.shape.as_list()[3]
             else:
                 self._hg_num_landmarks = 18
             assert self._hg_num_landmarks == 18
