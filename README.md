@@ -24,9 +24,9 @@ Deep Pictorial Gaze Estimation
 
 - Project page: https://ait.ethz.ch/projects/2018/pictorial-gaze
 
-*To download the used MPIIGaze data, please run `bash get_mpiigaze_hdf.bash`*
+*To download the MPIIGaze training data, please run `bash get_mpiigaze_hdf.bash`*
 
-*Note: this reimplementation differs the original proposed implementation and reaches 4.63 degrees in the within-MPIIGaze setting.*
+*Note: This reimplementation differs from the original proposed implementation and reaches 4.63 degrees in the within-MPIIGaze setting. The changes were made to attain comparable performance and results in a leaner model.*
 
 ## Installing dependencies
 
