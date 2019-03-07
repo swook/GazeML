@@ -5,6 +5,7 @@ import queue
 import threading
 import time
 
+import numpy as np
 import tensorflow as tf
 
 import logging
@@ -34,6 +35,9 @@ class BaseDataSource(object):
         self.testing = testing
         if testing:
             assert not shuffle and not staging
+            # if num_threads != 1:
+            #     logger.info('Forcing use of single thread for live testing.')
+            # num_threads = 1
         self.staging = staging
         self.shuffle = shuffle
         self.data_format = data_format.upper()
@@ -45,9 +49,10 @@ class BaseDataSource(object):
         self.all_threads = []
 
         # Setup file read queue
-        if fread_queue_capacity == 0:
-            fread_queue_capacity = (num_threads + 1) * batch_size
-        self._fread_queue = queue.Queue(maxsize=fread_queue_capacity)
+        self._fread_queue_capacity = fread_queue_capacity
+        if self._fread_queue_capacity == 0:
+            self._fread_queue_capacity = (num_threads + 1) * batch_size
+        self._fread_queue = queue.Queue(maxsize=self._fread_queue_capacity)
 
         with tf.variable_scope(''.join(c for c in self.short_name if c.isalnum())):
             # Setup preprocess queue
@@ -70,6 +75,7 @@ class BaseDataSource(object):
                 (label, tf.placeholder(dtype, shape=shape, name=label))
                 for label, dtype, shape in zip(labels, dtypes, shapes)
             ])
+
             self._enqueue_op = \
                 self._preprocess_queue.enqueue(tuple(self._tensors_to_enqueue.values()))
             self._preprocess_queue_close_op = \
@@ -122,25 +128,41 @@ class BaseDataSource(object):
         """
         raise NotImplementedError('BaseDataSource::short_name not specified.')
 
-    def cleanup(self):
-        """Close threads and clean up.
+    __cleaned_up = False
 
-        An instance of this class cannot recover from this operation.
-        """
-        if self._tensorflow_session is not None and len(self.all_threads) > 0:
-            self._coordinator.request_stop()
-            self._tensorflow_session.run(self._preprocess_queue_close_op)
-            if self.staging:
-                self._tensorflow_session.run(self._staging_area_clear_op)
-            self._coordinator.join(self.all_threads)
-        self._coordinator = None
-        self._staging_area = None
-        self._preprocess_queue = None
-        self._tensorflow_session = None
+    def cleanup(self):
+        """Force-close all threads."""
+        if self.__cleaned_up:
+            return
+
+        # Clear queues
+        fread_threads = [t for t in self.all_threads if t.name.startswith('fread_')]
+        preprocess_threads = [t for t in self.all_threads if t.name.startswith('preprocess_')]
+        transfer_threads = [t for t in self.all_threads if t.name.startswith('transfer_')]
+
+        self._coordinator.request_stop()
+
+        # Unblock any self._fread_queue.put calls
+        while True:
+            try:
+                self._fread_queue.get_nowait()
+            except queue.Empty:
+                break
+            time.sleep(0.1)
+
+        # Push data through to trigger exits in preprocess/transfer threads
+        for _ in range(self.batch_size * self.num_threads):
+            self._fread_queue.put(None)
+        self._tensorflow_session.run(self._preprocess_queue_close_op)
+        if self.staging:
+            self._tensorflow_session.run(self._staging_area_clear_op)
+
+        self._coordinator.join(self.all_threads, stop_grace_period_secs=5)
+        self.__cleaned_up = True
 
     def reset(self):
         """Reset threads and empty queues (where possible)."""
-        assert self.training is True
+        assert self.testing is True
 
         # Clear queues
         self._coordinator.request_stop()
@@ -204,7 +226,7 @@ class BaseDataSource(object):
             try:
                 entry = next(read_entry)
             except StopIteration:
-                if self.testing:
+                if not self.testing:
                     continue
                 else:
                     logger.debug('Reached EOF in %s' % threading.current_thread().name)

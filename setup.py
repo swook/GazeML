@@ -19,6 +19,7 @@ setup(
             'opencv-python',
             'pandas',
             'ujson',
+            'dlib',
 
             # Install the most appropriate version of Tensorflow
             # Ref. https://www.tensorflow.org/install/

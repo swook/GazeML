@@ -2,6 +2,8 @@
 import numpy as np
 import tensorflow as tf
 
+from core import BaseDataSource
+
 
 class SummaryManager(object):
     """Manager to remember and run summary operations as necessary."""
@@ -29,35 +31,8 @@ class SummaryManager(object):
         """Merge together cheap and expensive ops separately."""
         self._writer = tf.summary.FileWriter(self._model.output_path,
                                              self._tensorflow_session.graph)
-
-        for dict_ in (self._cheap_ops, self._expensive_ops):
-            for mode in ('train', 'test', 'full_test'):
-                prefixes = list(set([k.split('/')[0] for k in dict_[mode].keys()]))
-                # Do not merge loss and metric related summaries
-                for prefix in ('loss', 'metric'):
-                    if prefix in prefixes:
-                        prefixes.remove(prefix)
-                        for k, o in [(k, o) for k, o in dict_[mode].items()
-                                     if k.startswith(prefix + '/')]:
-                            del dict_[mode][k]
-                            k = k[len('%s/%s/' % (prefix, mode)):]
-                            dict_[mode][k] = o
-                # Define summary ops to merge based on prefix/scope
-                for prefix in prefixes:
-                    dict_[mode][prefix] = tf.summary.merge([
-                        o for k, o in dict_[mode].items()
-                        if k == prefix or k.startswith(prefix + '/')
-                    ])
-                    for k in [k for k in dict_[mode].keys() if k.startswith(prefix + '/')]:
-                        del dict_[mode][k]
-
-        # Merge ops as necessary
-        for dict_ in (self._cheap_ops, self._expensive_ops):
-            for mode in ('train', 'test', 'full_test'):
-                for prefix, ops in dict_[mode].items():
-                    if isinstance(ops, list):
-                        dict_[mode][prefix] = tf.summary.merge(ops)
-
+        for mode in ('train', 'test', 'full_test'):
+            self._expensive_ops[mode].update(self._cheap_ops[mode])
         self._ready_to_write = True
 
     def get_ops(self, mode='train'):
@@ -65,24 +40,19 @@ class SummaryManager(object):
         if not self._ready_to_write:
             self._prepare_for_write()
         if mode == 'test' or mode == 'full_test':  # Always return all ops for test case
-            return {
-                'cheap': self._cheap_ops[mode],
-                'expensive': self._expensive_ops[mode],
-            }
+            return self._expensive_ops[mode]
         elif mode == 'train':  # Select ops to evaluate based on defined frequency
-            ops = {}
             check_func = self._model.time.has_been_n_seconds_since_last
-            if check_func('cheap_summaries_train', self._cheap_ops_every_n_secs):
-                ops['cheap'] = self._cheap_ops[mode]
             if check_func('expensive_summaries_train', self._expensive_ops_every_n_secs):
-                ops['expensive'] = self._expensive_ops[mode]
-            return ops
+                return self._expensive_ops[mode]
+            elif check_func('cheap_summaries_train', self._cheap_ops_every_n_secs):
+                return self._cheap_ops[mode]
+        return {}
 
     def write_summaries(self, summary_outputs, iteration_number):
         """Write given outputs to `self._writer`."""
-        for _, group in summary_outputs.items():
-            for _, summary in group.items():
-                self._writer.add_summary(summary, global_step=iteration_number)
+        for _, summary in summary_outputs.items():
+            self._writer.add_summary(summary, global_step=iteration_number)
 
     def _get_clean_name(self, operation):
         name = operation.name
@@ -130,6 +100,9 @@ class SummaryManager(object):
         """TODO: Log summary of image."""
         if data_format == 'channels_first':
             tensor = tf.transpose(tensor, perm=(0, 2, 3, 1))
+        c = tensor.shape.as_list()[-1]
+        if c == 3:  # Assume RGB and convert to BGR for visualization
+            tensor = tensor[:, :, :, ::-1]   # TODO: find better solution
         operation = tf.summary.image(name, tensor, **kwargs)
         self._register_expensive_op(operation)
 
@@ -216,6 +189,17 @@ class SummaryManager(object):
                 tensor = tf.transpose(tensor, perm=(2, 3, 1, 0))
             # H x W x 1 x N
 
+            self._4d_tensor(name, tensor, **kwargs)
+
+    def tiled_images(self, name, tensor, data_format='channels_last', **kwargs):
+        """Log summary of feature maps / image activations."""
+        with tf.name_scope('viz_featuremaps'):
+            if data_format == 'channels_first':
+                # N x C x H x W
+                tensor = tf.transpose(tensor, perm=(0, 2, 3, 1))
+            # N x H x W x C
+            tensor = tf.transpose(tensor, perm=(1, 2, 3, 0))
+            # H x W x C x N
             self._4d_tensor(name, tensor, **kwargs)
 
     def scalar(self, name, tensor, **kwargs):

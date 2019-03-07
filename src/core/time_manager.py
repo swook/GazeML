@@ -65,7 +65,7 @@ class Timer(object):
 
     def start(self):
         """Cache starting time."""
-        assert not self._active
+        # assert not self._active
         self._start_time = time.time()
         self._active = True
 

@@ -3,16 +3,30 @@ A deep learning framework based on Tensorflow for the training of high performan
 
 *Please note that though this framework may work on various platforms, it has only been tested on an Ubuntu 16.04 system.*
 
+*All implementations are re-implementations of published algorithms and thus provided models should not be considered as reference.*
+
 This framework currently integrates the following models:
 
 ## ELG
 
 Eye region Landmarks based Gaze Estimation.
 
-> Park, Seonwook, Xucong Zhang, Andreas Bulling, and Otmar Hilliges. "Learning to find eye region landmarks for remote gaze estimation in unconstrained settings." In Proceedings of the 2018 ACM Symposium on Eye Tracking Research & Applications, p. 21. ACM, 2018.
+> Seonwook Park, Xucong Zhang, Andreas Bulling, and Otmar Hilliges. "Learning to find eye region landmarks for remote gaze estimation in unconstrained settings." In Proceedings of the 2018 ACM Symposium on Eye Tracking Research & Applications, p. 21. ACM, 2018.
 
 - Project page: https://ait.ethz.ch/projects/2018/landmarks-gaze/
 - Video: https://youtu.be/cLUHKYfZN5s
+
+## DPG
+
+Deep Pictorial Gaze Estimation
+
+> Seonwook Park, Adrian Spurr, and Otmar Hilliges. "Deep Pictorial Gaze Estimation". In European Conference on Computer Vision. 2018
+
+- Project page: https://ait.ethz.ch/projects/2018/pictorial-gaze
+
+*To download the used MPIIGaze data, please run `bash get_mpiigaze_hdf.bash`*
+
+*Note: this reimplementation differs the original proposed implementation and reaches 4.63 degrees in the within-MPIIGaze setting.*
 
 ## Installing dependencies
 

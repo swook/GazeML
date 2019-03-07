@@ -1,6 +1,7 @@
 """Base model class for Tensorflow-based model construction."""
 from .data_source import BaseDataSource
 import os
+import sys
 import time
 from typing import Any, Dict, List
 
@@ -27,13 +28,16 @@ class BaseModel(object):
                  learning_schedule: List[Dict[str, Any]] = [],
                  train_data: Dict[str, BaseDataSource] = {},
                  test_data: Dict[str, BaseDataSource] = {},
-                 test_losses_or_metrics: str = None):
+                 test_losses_or_metrics: str = None,
+                 use_batch_statistics_at_test: bool = True,
+                 identifier: str = None):
         """Initialize model with data sources and parameters."""
         self._tensorflow_session = tensorflow_session
         self._train_data = train_data
         self._test_data = test_data
         self._test_losses_or_metrics = test_losses_or_metrics
         self._initialized = False
+        self.__identifier = identifier
 
         # Extract and keep known prefixes/scopes
         self._learning_schedule = learning_schedule
@@ -60,6 +64,18 @@ class BaseModel(object):
         self._data_format_longer = ('channels_first' if self._data_format == 'NCHW'
                                     else 'channels_last')
 
+        # Make output dir
+        if not os.path.isdir(self.output_path):
+            os.makedirs(self.output_path)
+
+        # Log messages to file
+        root_logger = logging.getLogger()
+        file_handler = logging.FileHandler(self.output_path + '/messages.log')
+        file_handler.setFormatter(root_logger.handlers[0].formatter)
+        for handler in root_logger.handlers[1:]:  # all except stdout
+            root_logger.removeHandler(handler)
+        root_logger.addHandler(file_handler)
+
         # Register a manager for tf.Summary
         self.summary = SummaryManager(self)
 
@@ -71,18 +87,43 @@ class BaseModel(object):
 
         # Prepare for live (concurrent) validation/testing during training, on the CPU
         self._enable_live_testing = (len(self._train_data) > 0) and (len(self._test_data) > 0)
-        self._tester = LiveTester(self, self._test_data)
+        self._tester = LiveTester(self, self._test_data, use_batch_statistics_at_test)
 
         # Run-time parameters
-        self.is_training = tf.placeholder(tf.bool)
-        self.use_batch_statistics = tf.placeholder(tf.bool)
+        with tf.variable_scope('learning_params'):
+            self.is_training = tf.placeholder(tf.bool)
+            self.use_batch_statistics = tf.placeholder(tf.bool)
+            self.learning_rate_multiplier = tf.Variable(1.0, trainable=False, dtype=tf.float32)
+            self.learning_rate_multiplier_placeholder = tf.placeholder(dtype=tf.float32)
+            self.assign_learning_rate_multiplier = \
+                tf.assign(self.learning_rate_multiplier, self.learning_rate_multiplier_placeholder)
 
         self._build_all_models()
 
+    def __del__(self):
+        """Explicitly call methods to cleanup any live threads."""
+        train_data_sources = list(self._train_data.values())
+        test_data_sources = list(self._test_data.values())
+        all_data_sources = train_data_sources + test_data_sources
+        for data_source in all_data_sources:
+            data_source.cleanup()
+        self._tester.__del__()
+
+    __identifier_stem = None
+
     @property
     def identifier(self):
-        """Identifier for model based on data sources and parameters."""
-        return self.__class__.__name__
+        """Identifier for model based on time."""
+        if self.__identifier is not None:  # If loading from checkpoints or having naming enforced
+            return self.__identifier
+        if self.__identifier_stem is None:
+            self.__identifier_stem = self.__class__.__name__ + '/' + time.strftime('%y%m%d%H%M%S')
+        return self.__identifier_stem + self._identifier_suffix
+
+    @property
+    def _identifier_suffix(self):
+        """Identifier suffix for model based on data sources and parameters."""
+        return ''
 
     @property
     def output_path(self):
@@ -143,6 +184,22 @@ class BaseModel(object):
             _build_train_or_test(mode='train')
             logger.info('Built model for training.')
 
+            # Print no. of parameters and lops
+            flops = tf.profiler.profile(
+                options=tf.profiler.ProfileOptionBuilder(
+                    tf.profiler.ProfileOptionBuilder.float_operation()
+                ).with_empty_output().build())
+            logger.info('------------------------------')
+            logger.info(' Approximate Model Statistics ')
+            logger.info('------------------------------')
+            logger.info('FLOPS per input: {:,}'.format(flops.total_float_ops / self._batch_size))
+            logger.info(
+                'Trainable Parameters: {:,}'.format(
+                    np.sum([np.prod(v.shape.as_list()) for v in tf.trainable_variables()])
+                )
+            )
+            logger.info('------------------------------')
+
         # If there are any test data streams, build same model with different scope
         # Trainable parameters will be copied at test time
         if len(self._test_data) > 0:
@@ -164,12 +221,14 @@ class BaseModel(object):
             return
 
         # Build supporting operations
-        self.checkpoint.build_savers()  # Create savers
+        with tf.variable_scope('savers'):
+            self.checkpoint.build_savers()  # Create savers
         if training:
-            self._build_optimizers()
+            with tf.variable_scope('optimize'):
+                self._build_optimizers()
 
         # Start pre-processing routines
-        for _, datasource in dict(self._train_data, **self._test_data).items():
+        for _, datasource in self._train_data.items():
             datasource.create_and_start_threads()
 
         # Initialize all variables
@@ -180,9 +239,13 @@ class BaseModel(object):
         """Based on learning schedule, create optimizer instances."""
         self._optimize_ops = []
         all_trainable_variables = tf.trainable_variables()
+        all_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+        all_reg_losses = tf.losses.get_regularization_losses()
         for spec in self._learning_schedule:
             optimize_ops = []
+            update_ops = []
             loss_terms = spec['loss_terms_to_optimize']
+            reg_losses = []
             assert isinstance(loss_terms, dict)
             for loss_term_key, prefixes in loss_terms.items():
                 assert loss_term_key in self.loss_terms['train'].keys()
@@ -192,15 +255,32 @@ class BaseModel(object):
                         v for v in all_trainable_variables
                         if v.name.startswith(prefix)
                     ]
-                optimize_op = tf.train.AdamOptimizer(
-                    learning_rate=spec['learning_rate'],
+                    update_ops += [
+                        o for o in all_update_ops
+                        if o.name.startswith(prefix)
+                    ]
+                    reg_losses += [
+                        l for l in all_reg_losses
+                        if l.name.startswith(prefix)
+                    ]
+
+                optimizer_class = tf.train.AdamOptimizer
+                optimizer = optimizer_class(
+                    learning_rate=self.learning_rate_multiplier * spec['learning_rate'],
                     # beta1=0.9,
                     # beta2=0.999,
-                ).minimize(
-                    loss=self.loss_terms['train'][loss_term_key],
-                    var_list=variables_to_train,
-                    name='optimize_%s' % loss_term_key,
                 )
+                final_loss = self.loss_terms['train'][loss_term_key]
+                if len(reg_losses) > 0:
+                    final_loss += tf.reduce_sum(reg_losses)
+                with tf.control_dependencies(update_ops):
+                    gradients, variables = zip(*optimizer.compute_gradients(
+                        loss=final_loss,
+                        var_list=variables_to_train,
+                        aggregation_method=tf.AggregationMethod.EXPERIMENTAL_ACCUMULATE_N,
+                    ))
+                    # gradients, _ = tf.clip_by_global_norm(gradients, 5.0)  # TODO: generalize
+                    optimize_op = optimizer.apply_gradients(zip(gradients, variables))
                 optimize_ops.append(optimize_op)
             self._optimize_ops.append(optimize_ops)
             logger.info('Built optimizer for: %s' % ', '.join(loss_terms.keys()))
@@ -220,57 +300,69 @@ class BaseModel(object):
             num_steps = int(num_epochs * num_entries / self._batch_size)
         self.initialize_if_not(training=True)
 
-        initial_step = self.checkpoint.load_all()
-        current_step = initial_step
-        for current_step in range(initial_step, num_steps):
-            # Extra operations defined in implementation of this base class
-            self.train_loop_pre(current_step)
+        try:
+            initial_step = self.checkpoint.load_all()
+            current_step = initial_step
+            for current_step in range(initial_step, num_steps):
+                # Extra operations defined in implementation of this base class
+                self.train_loop_pre(current_step)
 
-            # Select loss terms, optimize operations, and metrics tensors to evaluate
-            fetches = {}
-            schedule_id = current_step % len(self._learning_schedule)
-            schedule = self._learning_schedule[schedule_id]
-            fetches['optimize_ops'] = self._optimize_ops[schedule_id]
-            loss_term_keys, _ = zip(*list(schedule['loss_terms_to_optimize'].items()))
-            fetches['loss_terms'] = [self.loss_terms['train'][k] for k in loss_term_keys]
-            summary_ops = self.summary.get_ops(mode='train')
-            if len(summary_ops) > 0:
-                fetches['summaries'] = summary_ops
+                # Select loss terms, optimize operations, and metrics tensors to evaluate
+                fetches = {}
+                schedule_id = current_step % len(self._learning_schedule)
+                schedule = self._learning_schedule[schedule_id]
+                fetches['optimize_ops'] = self._optimize_ops[schedule_id]
+                loss_term_keys, _ = zip(*list(schedule['loss_terms_to_optimize'].items()))
+                fetches['loss_terms'] = [self.loss_terms['train'][k] for k in loss_term_keys]
+                summary_op = self.summary.get_ops(mode='train')
+                if len(summary_op) > 0:
+                    fetches['summaries'] = summary_op
 
-            # Run one optimization iteration and retrieve calculated loss values
-            self.time.start('train_iteration', average_over_last_n_timings=100)
-            outcome = self._tensorflow_session.run(
-                fetches=fetches,
-                feed_dict={
-                    self.is_training: True,
-                    self.use_batch_statistics: True,
-                }
-            )
-            self.time.end('train_iteration')
+                # Run one optimization iteration and retrieve calculated loss values
+                self.time.start('train_iteration', average_over_last_n_timings=100)
+                outcome = self._tensorflow_session.run(
+                    fetches=fetches,
+                    feed_dict={
+                        self.is_training: True,
+                        self.use_batch_statistics: True,
+                    }
+                )
+                self.time.end('train_iteration')
 
-            # Print progress
-            to_print = '%07d> ' % current_step
-            to_print += ', '.join(['%s = %g' % (k, v)
-                                   for k, v in zip(loss_term_keys, outcome['loss_terms'])])
-            self.time.log_every('train_iteration', to_print, seconds=2)
+                # Print progress
+                to_print = '%07d> ' % current_step
+                to_print += ', '.join(['%s = %g' % (k, v)
+                                       for k, v in zip(loss_term_keys, outcome['loss_terms'])])
+                self.time.log_every('train_iteration', to_print, seconds=2)
 
-            # Trigger copy weights & concurrent testing (if not already running)
-            if self._enable_live_testing:
-                self._tester.trigger_test_if_not_testing(current_step)
+                # Trigger copy weights & concurrent testing (if not already running)
+                if self._enable_live_testing:
+                    self._tester.trigger_test_if_not_testing(current_step)
 
-            # Write summaries
-            if 'summaries' in outcome:
-                self.summary.write_summaries(outcome['summaries'], current_step)
+                # Write summaries
+                if 'summaries' in outcome:
+                    self.summary.write_summaries(outcome['summaries'], current_step)
 
-            # Save model weights
-            if self.time.has_been_n_seconds_since_last('save_weights', 600):
-                self.checkpoint.save_all(current_step)
+                # Save model weights
+                if self.time.has_been_n_seconds_since_last('save_weights', 600) \
+                        and current_step > initial_step:
+                    self.checkpoint.save_all(current_step)
 
-            # Extra operations defined in implementation of this base class
-            self.train_loop_post(current_step)
+                # Extra operations defined in implementation of this base class
+                self.train_loop_post(current_step)
+
+        except KeyboardInterrupt:
+            # Handle CTRL-C graciously
+            self.checkpoint.save_all(current_step)
+            sys.exit(0)
+
+        # Stop live testing, and run final full test
+        if self._enable_live_testing:
+            self._tester.do_final_full_test(current_step)
 
         # Save final weights
-        self.checkpoint.save_all(current_step)
+        if current_step > initial_step:
+            self.checkpoint.save_all(current_step)
 
     def inference_generator(self):
         """Perform inference on test data and yield a batch of output."""

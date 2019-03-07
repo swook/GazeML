@@ -2,11 +2,13 @@
 from threading import Lock
 from typing import List
 
+import cv2 as cv
 import h5py
 import numpy as np
 import tensorflow as tf
 
 from core import BaseDataSource
+import util.gazemap
 
 
 class HDF5Source(BaseDataSource):
@@ -18,12 +20,16 @@ class HDF5Source(BaseDataSource):
                  keys_to_use: List[str],
                  hdf_path: str,
                  testing=False,
+                 eye_image_shape=(36, 60),
                  **kwargs):
         """Create queues and threads to read and preprocess data from specified keys."""
         hdf5 = h5py.File(hdf_path, 'r')
         self._short_name = 'HDF:%s' % '/'.join(hdf_path.split('/')[-2:])
         if testing:
             self._short_name += ':test'
+
+        # Cache some parameters
+        self._eye_image_shape = eye_image_shape
 
         # Create global index over all specified keys
         self._index_to_key = {}
@@ -38,7 +44,7 @@ class HDF5Source(BaseDataSource):
         self._hdf5 = hdf5
         self._mutex = Lock()
         self._current_index = 0
-        super().__init__(tensorflow_session, batch_size, testing=testing, **kwargs)
+        super().__init__(tensorflow_session, batch_size=batch_size, testing=testing, **kwargs)
 
         # Set index to 0 again as base class constructor called HDF5Source::entry_generator once to
         # get preprocessed sample.
@@ -56,7 +62,6 @@ class HDF5Source(BaseDataSource):
 
     def cleanup(self):
         """Close HDF5 file before running base class cleanup routine."""
-        self._hdf5.close()
         super().cleanup()
 
     def reset(self):
@@ -91,12 +96,20 @@ class HDF5Source(BaseDataSource):
 
     def preprocess_entry(self, entry):
         """Resize eye image and normalize intensities."""
+        oh, ow = self._eye_image_shape
         eye = entry['eye']
+        eye = cv.resize(eye, (ow, oh))
         eye = eye.astype(np.float32)
         eye *= 2.0 / 255.0
         eye -= 1.0
-        eye = np.expand_dims(eye, axis=0)  # Images are expected to have 3 dimensions
+        eye = np.expand_dims(eye, axis=0 if self.data_format == 'NCHW' else -1)
         entry['eye'] = eye
+
+        entry['gazemaps'] = util.gazemap.from_gaze2d(
+            entry['gaze'], output_size=(oh, ow), scale=0.5,
+        ).astype(np.float32)
+        if self.data_format == 'NHWC':
+            np.transpose(entry['gazemaps'], (1, 2, 0))
 
         # Ensure all values in an entry are 4-byte floating point numbers
         for key, value in entry.items():
