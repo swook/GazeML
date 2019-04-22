@@ -27,13 +27,13 @@ class DPG(BaseModel):
 
     _hg_first_layer_stride = 2
     _hg_num_modules = 3
-    _hg_num_feature_maps = 64
+    _hg_num_feature_maps = 32
     _hg_num_residual_blocks = 1
     _hg_num_gazemaps = 2
 
     _dn_growth_rate = 8
     _dn_compression_factor = 0.5
-    _dn_num_layers_per_block = (5, 5, 5, 5)
+    _dn_num_layers_per_block = (4, 4, 4, 4)
     _dn_num_dense_blocks = len(_dn_num_layers_per_block)
 
     @property

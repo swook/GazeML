@@ -2,7 +2,7 @@
 import cv2 as cv
 import numpy as np
 
-height_to_eyeball_radius_ratio = 1.2
+height_to_eyeball_radius_ratio = 1.1
 eyeball_radius_to_iris_diameter_ratio = 1.0
 
 def from_gaze2d(gaze, output_size, scale=1.0):

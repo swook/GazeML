@@ -30,7 +30,7 @@ if __name__ == '__main__':
         with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as session:
 
             # Declare some parameters
-            batch_size = 16
+            batch_size = 32
 
             # Define training data source
             from datasources import HDF5Source
