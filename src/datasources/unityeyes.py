@@ -234,7 +234,8 @@ class UnityEyes(BaseDataSource):
                 line_colour = int(255 * line_rand_nums[j + 3])
                 eye = cv.line(eye, (lx0, ly0), (lx1, ly1),
                               color=(line_colour, line_colour, line_colour),
-                              thickness=int(6*line_rand_nums[j + 4]), lineType=cv.LINE_AA)
+                              thickness=max(1, int(6*line_rand_nums[j + 4])),
+                              lineType=cv.LINE_AA)
 
         # Rescale image if required
         rescale_max = value_from_type('rescale')
