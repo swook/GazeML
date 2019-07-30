@@ -29,6 +29,7 @@ if __name__ == '__main__':
     parser.add_argument('--fps', type=int, default=60, help='Desired sampling rate of webcam')
     parser.add_argument('--camera_id', type=int, default=0, help='ID of webcam to use')
 
+
     args = parser.parse_args()
     coloredlogs.install(
         datefmt='%d/%m %H:%M',
