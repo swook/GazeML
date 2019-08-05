@@ -20,7 +20,6 @@ import util.gaze
 start_condition = False
 is_detect = False
 
-
 ###################################### Start Cali #############################################
 Const_Cali_Window_name = 'canvas'
 # Const_Display_X = 1680
