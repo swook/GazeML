@@ -327,7 +327,13 @@ if __name__ == '__main__':
             fps_history = []
             all_gaze_histories = []
 
+            # 패턴
 
+            pattern = [1, 3, 9, 7]
+            before_history = 0
+            after_history = 0
+            pattern_compare = []
+            match = 0
             
             if args.fullscreen:
                 cv.namedWindow('vis', cv.WND_PROP_FULLSCREEN)
