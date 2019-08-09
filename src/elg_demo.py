@@ -460,14 +460,20 @@ if __name__ == '__main__':
 
 
                     # Transform predictions
-                    eye_landmarks = np.concatenate([eye_landmarks, [[eye_landmarks[-1, 0] + eye_radius, eye_landmarks[-1, 1]]]])
-                    eye_landmarks = np.asmatrix(np.pad(eye_landmarks, ((0, 0), (0, 1)), 'constant', constant_values=1.0))
-                    eye_landmarks = (eye_landmarks * eye['inv_landmarks_transform_mat'].T)[:, :2]
+                    # 눈 중심 변경
+                    
+                    eye_landmarks = np.concatenate([eye_landmarks,
+                                                    [[eye_landmarks[-1, 0] + eye_radius,
+                                                      eye_landmarks[-1, 1]]]])
+                    eye_landmarks = np.asmatrix(np.pad(eye_landmarks, ((0, 0), (0, 1)),
+                                                       'constant', constant_values=1.0))
+                    eye_landmarks = (eye_landmarks *
+                                     eye['inv_landmarks_transform_mat'].T)[:, :2]
                     eye_landmarks = np.asarray(eye_landmarks)
                     eyelid_landmarks = eye_landmarks[0:8, :]
                     iris_landmarks = eye_landmarks[8:16, :]
-                    iris_centre = eye_landmarks[16, :]
-                    eyeball_centre = eye_landmarks[17, :]
+                    iris_centre = sum(iris_landmarks) / len(iris_landmarks)
+                    eyeball_centre = sum(eye_landmarks) / len(eye_landmarks)
                     eyeball_radius = np.linalg.norm(eye_landmarks[18, :] -
                                                     eye_landmarks[17, :])
 
