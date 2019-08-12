@@ -499,12 +499,56 @@ if __name__ == '__main__':
                         # from models.elg import estimate_gaze_from_landmarks
                         # current_gaze = estimate_gaze_from_landmarks(
                         #     iris_landmarks, iris_centre, eyeball_centre, eyeball_radius)
+                        # 눈 좌표 변경
+
                         i_x0, i_y0 = iris_centre
                         e_x0, e_y0 = eyeball_centre
-                        theta = -np.arcsin(np.clip((i_y0 - e_y0) / eyeball_radius, -1.0, 1.0))
-                        phi = np.arcsin(np.clip((i_x0 - e_x0) / (eyeball_radius * -np.cos(theta)),
-                                                -1.0, 1.0))
-                        current_gaze = np.array([theta, phi])
+                        Cx = 2
+                        Cy = -0.5
+                        x_middle = 0.025
+                        y_middle = 0.025
+                        gaze_x = i_x0 - e_x0 + Cx
+                        gaze_y = i_y0 - e_y0 + Cy
+                        eye_size_x = eye_landmarks[4][0] - eye_landmarks[0][0]
+                        eye_size_y = eye_landmarks[6][1] - eye_landmarks[2][1]
+                        if abs(gaze_x) < x_middle * eye_size_x and abs(gaze_y) < y_middle * eye_size_y :
+                            dx = 5
+                            dy = 5
+                            point = 5
+                        elif gaze_x <= -1 * x_middle * eye_size_x and gaze_y <= -1 * y_middle * eye_size_y :
+                            dx = 42
+                            dy = 68
+                            point = 1
+                        elif abs(gaze_x) < x_middle * eye_size_x and gaze_y <= -1 * y_middle * eye_size_y :
+                            dx = 5
+                            dy = 68
+                            point = 2
+                        elif gaze_x >= x_middle * eye_size_x and gaze_y <= -1 * y_middle * eye_size_y :
+                            dx = 42
+                            dy = 68
+                            point = 3
+                        elif gaze_x <= -1 * x_middle * eye_size_x and abs(gaze_y) < y_middle * eye_size_y :
+                            dx = 42
+                            dy = 5
+                            point = 4
+                        elif gaze_x >= x_middle * eye_size_x and abs(gaze_y) < y_middle * eye_size_y :
+                            dx = 42
+                            dy = 5
+                            point = 6
+                        elif gaze_x <= -1 * x_middle * eye_size_x and gaze_y >= y_middle * eye_size_y :
+                            dx = 42
+                            dy = 68
+                            point = 7
+                        elif abs(gaze_x) < x_middle * eye_size_x and gaze_y >= y_middle * eye_size_y :
+                            dx = 5
+                            dy = 68
+                            point = 8
+                        elif gaze_x >= x_middle * eye_size_x and gaze_y >= y_middle * eye_size_y :
+                            dx = 42
+                            dy = 68
+                            point = 9
+                        current_gaze = np.array([i_x0 + gaze_x * abs(gaze_x) * dx, i_y0 + 3 * gaze_y * abs(3 * gaze_y) * dy])
+
                         gaze_history.append(current_gaze)
                         gaze_history_max_len = 10
                         
