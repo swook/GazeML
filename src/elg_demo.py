@@ -554,9 +554,14 @@ if __name__ == '__main__':
                         
                         if len(gaze_history) > gaze_history_max_len:
                             gaze_history = gaze_history[-gaze_history_max_len:]
-                        util.gaze.draw_gaze(bgr, iris_centre, np.mean(gaze_history, axis=0),
-                                            length=120.0, thickness=1)
-                    else:
+                            
+                        # 시선 좌표 변경
+
+                        gaze_mean = np.mean(gaze_history, axis=0)
+                        util.gaze.draw_gaze(bgr, iris_centre, gaze_mean,
+                                            thickness=1)                            
+
+                        else:
                         gaze_history.clear()
 
                     if can_use_eyelid:
