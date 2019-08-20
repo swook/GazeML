@@ -642,6 +642,9 @@ if __name__ == '__main__':
                                 'latency: %dms' % latency,
                             ])
                             print('%08d [%s] %s' % (frame_index, fps_str, timing_string))
+
+                            # 결과값 출력
+
                             print("current gaze : ", gaze_mean)
                             print("point : ", point)
                             before_history = after_history
@@ -659,11 +662,7 @@ if __name__ == '__main__':
                                 else :
                                     pattern_compare = []
                                     print("_____pattern_match")
-                            
-                            # 결과값 출력
 
-
-        
         ## End visualize_output ##
 
         # calibration_thread = threading.Thread(target=start_cali, name='calibration_th2')
