@@ -625,8 +625,8 @@ if __name__ == '__main__':
                         # Quit?
                         # 패턴 매치
 
-                        #if (cv.waitKey(1) & 0xFF == ord('q')) | match == 1:
-                        #   return
+                        if (cv.waitKey(1) & 0xFF == ord('q')) | match == 1:
+                           return
 
                         # Print timings
                         if frame_index % 60 == 0:
