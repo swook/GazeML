@@ -334,6 +334,8 @@ if __name__ == '__main__':
             after_history = 0
             pattern_compare = []
             match = 0
+            gaze_mean = 0
+            point = 0
             
             if args.fullscreen:
                 cv.namedWindow('vis', cv.WND_PROP_FULLSCREEN)
@@ -561,7 +563,7 @@ if __name__ == '__main__':
                         util.gaze.draw_gaze(bgr, iris_centre, gaze_mean,
                                             thickness=1)                            
 
-                        else:
+                    else:
                         gaze_history.clear()
 
                     if can_use_eyelid:
@@ -640,9 +642,6 @@ if __name__ == '__main__':
                                 'latency: %dms' % latency,
                             ])
                             print('%08d [%s] %s' % (frame_index, fps_str, timing_string))
-                            
-                            # 결과값 출력
-
                             print("current gaze : ", gaze_mean)
                             print("point : ", point)
                             before_history = after_history
@@ -660,6 +659,10 @@ if __name__ == '__main__':
                                 else :
                                     pattern_compare = []
                                     print("_____pattern_match")
+                            
+                            # 결과값 출력
+
+
         
         ## End visualize_output ##
 
@@ -708,4 +711,3 @@ if __name__ == '__main__':
             video_out_queue.put_nowait(None)
             with video_out_done:
                 video_out_done.wait()
-
