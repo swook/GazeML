@@ -329,10 +329,10 @@ if __name__ == '__main__':
 
             # 패턴
 
-            pattern = [0, 1, 3, 9, 7]
+            pattern = [1, 3, 9, 7]
             before_history = 0
             after_history = 0
-            pattern_compare = [0]
+            pattern_compare = []
             match = 0
             gaze_mean = 0
             point = 0
