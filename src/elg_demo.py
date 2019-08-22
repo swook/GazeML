@@ -648,7 +648,8 @@ if __name__ == '__main__':
                             print("current gaze : ", gaze_mean)
                             print("point : ", point)
                             before_history = after_history
-                            after_history = point                            match = 0
+                            after_history = point
+                            match = 0
                             if before_history == after_history : 
                                 if after_history in pattern_compare :
                                     print("xxxxx", pattern_compare)
