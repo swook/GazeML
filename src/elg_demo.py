@@ -665,7 +665,7 @@ if __name__ == '__main__':
                                     match = match + 1
                                 else :
                                     match = 0
-                                    pattern_compare = []
+                                    pattern_compare = [0]
                                     break
                                 i = i + 1
 
