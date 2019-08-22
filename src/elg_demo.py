@@ -332,7 +332,7 @@ if __name__ == '__main__':
             pattern = [1, 3, 9, 7]
             before_history = 0
             after_history = 0
-            pattern_compare = []
+            pattern_compare = [0]
             match = 0
             gaze_mean = 0
             point = 0
