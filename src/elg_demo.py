@@ -648,20 +648,25 @@ if __name__ == '__main__':
                             print("current gaze : ", gaze_mean)
                             print("point : ", point)
                             before_history = after_history
-                            after_history = point
+                            after_history = point                            match = 0
                             if before_history == after_history : 
                                 if after_history in pattern_compare :
                                     print("xxxxx", pattern_compare)
                                 else :
                                     pattern_compare.append(after_history)
                                     print("pattern_compare : ", pattern_compare)
-                            if len(pattern_compare) == len(pattern) :
-                                if pattern_compare == pattern :
-                                    match = 1
-                                    print("pattern_match")
+
+                            # 매치 알고리즘
+
+                            i = 0
+                            while i < len(pattern_compare) :
+                                if pattern_compare[i] == pattern[i] :
+                                    match = match + 1
                                 else :
-                                    pattern_compare = []
-                                    print("_____pattern_match")
+                                    match = 0
+                                    pattern_compare = [0]
+                                    break
+                                i = i + 1
 
         ## End visualize_output ##
 
