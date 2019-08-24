@@ -17,8 +17,12 @@ from datasources import Video, Webcam
 from models import ELG
 import util.gaze
 
-start_condition = False
+
+
+
 is_detect = False
+is_start_calibration = False
+is_finish_calibration = False
 
 
 ###################################### Start Cali #############################################
@@ -53,7 +57,10 @@ sequence = queue.Queue()
 
 
 def start_cali():
+    global is_start_calibration
+    is_start_calibration = True
 
+    print("Start Calibration!")
     # 큐에 캘리브레이션 순서 인덱스를 찾례로 넣는다
     for i in range(0, Const_Cali_Num_X * 1):
         sequence.put_nowait(i)
@@ -70,9 +77,12 @@ def start_cali():
         draw_cross(img, point)
     # 큐의 순서대로 캘리브레이션 시작
     index = sequence.get_nowait()
+
+
     resize_figure(img, Cali_Center_Points[index], Const_Cali_Radius, Const_Cali_Caputure_Duration, background)
 
     cv2.waitKey(0)
+    print("pressed key!! End calibration!")
     close_window(Const_Cali_Window_name)
     return
 
@@ -112,9 +122,6 @@ def move_figure(img, start_point, end_point, current_point, duration, background
 
 def resize_figure(img, point, current_radius, duration, background, count = 0):
 
-
-
-
     img = background.copy()
 
     Const_Unit_Time = 60        # 0.01초마다 실행
@@ -137,6 +144,11 @@ def resize_figure(img, point, current_radius, duration, background, count = 0):
     if(count == (duration * Const_Unit_Time)):
         # 다음 캘리브레이션 경로가 없다면 창 종료
         if (sequence.empty() == True):
+
+            global is_finish_calibration
+            is_finish_calibration = True                # 종료플레그
+            print("Complete Calibration!!")
+            close_window(Const_Cali_Window_name)
             return
         ##########################################
         # to-do : 눈의 좌표 저장 
@@ -193,6 +205,7 @@ def close_window(canvas_name):
 
 
 if __name__ == '__main__':
+
 
 
     # Set global log level
@@ -349,7 +362,8 @@ if __name__ == '__main__':
                             is_detect = False
 
                             if not args.headless:
-                                # cv.imshow('vis', next_frame['bgr'])
+                                if is_finish_calibration == True:
+                                    cv.imshow('vis', next_frame['bgr'])
                                 None
 
                             if args.record_video:
@@ -357,20 +371,18 @@ if __name__ == '__main__':
                             last_frame_index = next_frame_index
 
                         elif not 'faces' in next_frame :
-                            is_detect = True
-                            global start_condition
-                            if (start_condition == False):
-                                None
-                                start_condition = True
+                            is_detect = True                    ## Detecting Face
+
+                            global is_start_calibration
+                            if is_start_calibration == False:   ## Only play once Calibration
                                 calibration_thread = threading.Thread(target=start_cali, name='calibration_th2')
                                 calibration_thread.daemon = True
                                 calibration_thread.start()
 
-                    # print(is_detect) 
-
                     #/////////////////////////////////////////////////////
-                    # if cv.waitKey(1) & 0xFF == ord('q'):
-                    #     return
+                    if is_finish_calibration == True:
+                        if cv.waitKey(1) & 0xFF == ord('q'):
+                            return
                     #/////////////////////////////////////////////////////
                     continue
 
@@ -551,8 +563,8 @@ if __name__ == '__main__':
                                    color=(255, 255, 255), thickness=1, lineType=cv.LINE_AA)
                         if not args.headless:
 
-
-                            # cv.imshow('vis', bgr)
+                            if is_finish_calibration == True:
+                                cv.imshow('vis', bgr)
                             None
                         last_frame_index = frame_index
 
@@ -560,9 +572,10 @@ if __name__ == '__main__':
                         if args.record_video:
                             video_out_queue.put_nowait(frame_index)
 
-                        # Quit?
-                        # if cv.waitKey(1) & 0xFF == ord('q'):
-                        #     return
+                        if is_finish_calibration == True:
+                            # Quit?
+                            if cv.waitKey(1) & 0xFF == ord('q'):
+                                return
 
                         # Print timings
                         if frame_index % 60 == 0:
@@ -581,9 +594,7 @@ if __name__ == '__main__':
         
         ## End visualize_output ##
 
-        # calibration_thread = threading.Thread(target=start_cali, name='calibration_th2')
-        # calibration_thread.daemon = True
-        # calibration_thread.start()
+
 
 
         visualize_thread = threading.Thread(target=_visualize_output, name='visualization')
