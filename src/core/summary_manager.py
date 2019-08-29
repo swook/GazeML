@@ -2,7 +2,8 @@
 import numpy as np
 import tensorflow as tf
 
-from core import BaseDataSource
+import logging
+logger = logging.getLogger(__name__)
 
 
 class SummaryManager(object):
@@ -75,12 +76,18 @@ class SummaryManager(object):
 
     def _register_cheap_op(self, operation):
         mode, name = self._get_clean_name(operation)
-        assert name not in self._cheap_ops[mode] and name not in self._expensive_ops[mode]
+        try:
+            assert name not in self._cheap_ops[mode] and name not in self._expensive_ops[mode]
+        except AssertionError:
+            raise Exception('Duplicate definition of summary item: "%s"' % name)
         self._cheap_ops[mode][name] = operation
 
     def _register_expensive_op(self, operation):
         mode, name = self._get_clean_name(operation)
-        assert name not in self._cheap_ops[mode] and name not in self._expensive_ops[mode]
+        try:
+            assert name not in self._cheap_ops[mode] and name not in self._expensive_ops[mode]
+        except AssertionError:
+            raise Exception('Duplicate definition of summary item: "%s"' % name)
         self._expensive_ops[mode][name] = operation
 
     def audio(self, name, tensor, **kwargs):
