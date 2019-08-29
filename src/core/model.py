@@ -182,7 +182,7 @@ class BaseModel(object):
         if len(self._train_data) > 0:
             _build_datasource_summaries(self._train_data, mode='train')
             _build_train_or_test(mode='train')
-            logger.info('Built model for training.')
+            logger.info('Built model.')
 
             # Print no. of parameters and lops
             flops = tf.profiler.profile(
@@ -206,7 +206,7 @@ class BaseModel(object):
             _build_datasource_summaries(self._test_data, mode='test')
             with tf.variable_scope('test'):
                 _build_train_or_test(mode='test')
-            logger.info('Built model for testing.')
+            logger.info('Built model for live testing.')
 
         if self._enable_live_testing:
             self._tester._post_model_build()  # Create copy ops to be run before every test run
