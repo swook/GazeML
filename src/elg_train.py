@@ -19,13 +19,12 @@ if __name__ == '__main__':
     )
 
     # Initialize Tensorflow session
-    tf.logging.set_verbosity(tf.logging.INFO)
+    tf.logging.set_verbosity(tf.logging.ERROR)
     gpu_options = tf.GPUOptions(allow_growth=True)
     with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as session:
 
         # Declare some parameters
         batch_size = 32
-
 
         # Define some model-specific parameters
         elg_first_layer_stride = 1

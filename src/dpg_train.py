@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
         # Initialize Tensorflow session
         tf.reset_default_graph()
-        tf.logging.set_verbosity(tf.logging.INFO)
+        tf.logging.set_verbosity(tf.logging.ERROR)
         gpu_options = tf.GPUOptions(allow_growth=True)
         with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as session:
 
