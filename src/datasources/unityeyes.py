@@ -91,6 +91,8 @@ class UnityEyes(BaseDataSource):
                 file_stem = self._file_stems[current_index]
                 jpg_path = '%s/%s.jpg' % (self._images_path, file_stem)
                 json_path = '%s/%s.json' % (self._images_path, file_stem)
+                if not os.path.isfile(jpg_path) or not os.path.isfile(json_path):
+                    continue
                 with open(json_path, 'r') as f:
                     json_data = ujson.load(f)
                 entry = {
