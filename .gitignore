@@ -1,5 +1,6 @@
 # Datasets folder
 datasets/*
+src/data/
 
 # Outputs folder
 outputs/
@@ -14,3 +15,4 @@ __pycache__/
 # Python package caches
 dist/
 *.egg-info/
+
