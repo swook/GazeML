@@ -73,6 +73,7 @@ if __name__ == '__main__':
                                  eye_image_shape=(36, 60))
 
         # Define model
+        # CH Question: Why do videos vs webcams use different parameters?
         if args.from_video:
             model = ELG(
                 session, train_data={'videostream': data_source},
@@ -138,6 +139,9 @@ if __name__ == '__main__':
 
         # Begin visualization thread
         inferred_stuff_queue = queue.Queue()
+
+        # Constructs the video visualization of the output
+        # It receives the neural network output  from the inferred_stuff_queue
 
         def _visualize_output():
             global is_shown
@@ -387,6 +391,9 @@ if __name__ == '__main__':
                     frame['time']['inference'] += output['inference_time']
                 else:
                     frame['time']['inference'] = output['inference_time']
+
+            print('Output keys\n', output.keys())
+
             inferred_stuff_queue.put_nowait(output)
 
             if is_shown:
