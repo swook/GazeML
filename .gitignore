@@ -1,8 +1,10 @@
 # Datasets folder
 datasets/*
+src/data/
 
 # Outputs folder
-outputs/
+outputs/ELG_i60x36_f60x36_n32_m2/
+outputs/ELG_i180x108_f60x36_n64_m3/
 
 # 3rd party files
 src/3rdparty
@@ -14,3 +16,9 @@ __pycache__/
 # Python package caches
 dist/
 *.egg-info/
+
+src/commands.md
+
+.vscode/
+
+

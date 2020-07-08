@@ -20,6 +20,7 @@ setup(
             'pandas',
             'ujson',
             'dlib',
+            'tensorflow>=1,<2',
 
             # Install the most appropriate version of Tensorflow
             # Ref. https://www.tensorflow.org/install/
