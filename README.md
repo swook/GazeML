@@ -5,6 +5,12 @@ A deep learning framework based on Tensorflow for the training of high performan
 
 *All implementations are re-implementations of published algorithms and thus provided models should not be considered as reference.*
 
+---
+
+This is a fork from [swook/GazeML](https://github.com/swook/GazeML). I am on fixing some issues in importing the model to `.onnx` format and further to TensorRT `.engine` format.
+
+---
+
 This framework currently integrates the following models:
 
 ## ELG
