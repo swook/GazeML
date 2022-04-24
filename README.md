@@ -9,6 +9,14 @@ A deep learning framework based on Tensorflow for the training of high performan
 
 This is a fork from [swook/GazeML](https://github.com/swook/GazeML). I am on fixing some issues in importing the model to `.onnx` format and further to TensorRT `.engine` format.
 
+I have tested this on:
+- Ubuntu 20.04
+- NVIDIA GeForce RTX 3080 Laptop GPU
+- Nvidia driver 510.54
+- CUDA 11.6
+- python 3.6
+- tensorflow 1.14
+
 ---
 
 This framework currently integrates the following models:
