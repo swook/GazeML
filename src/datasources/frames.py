@@ -113,7 +113,7 @@ class FramesSource(BaseDataSource):
                     yield {
                         'frame_index': np.int64(current_index),
                         'eye': eye_dict['image'],
-                        'eye_index': np.uint8(i),
+                        'eye_index': np.int64(i),
                     }
 
         finally:

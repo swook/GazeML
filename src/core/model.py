@@ -29,7 +29,7 @@ class BaseModel(object):
                  train_data: Dict[str, BaseDataSource] = {},
                  test_data: Dict[str, BaseDataSource] = {},
                  test_losses_or_metrics: str = None,
-                 use_batch_statistics_at_test: bool = True,
+                 use_batch_statistics_at_test: bool = False,
                  identifier: str = None):
         """Initialize model with data sources and parameters."""
         self._tensorflow_session = tensorflow_session
@@ -324,7 +324,7 @@ class BaseModel(object):
                     fetches=fetches,
                     feed_dict={
                         self.is_training: True,
-                        self.use_batch_statistics: True,
+                        self.use_batch_statistics: False,
                     }
                 )
                 self.time.end('train_iteration')
@@ -378,8 +378,15 @@ class BaseModel(object):
                 fetches=fetches,
                 feed_dict={
                     self.is_training: False,
-                    self.use_batch_statistics: True,
+                    self.use_batch_statistics: False,
                 },
             )
+
+            
+            # Save saved-model
+            # This model can be used to convert to .onnx and further to .engine
+            tf.saved_model.simple_save(self._tensorflow_session, "tmp",
+                inputs=data_source.output_tensors, outputs=fetches)
+
             outputs['inference_time'] = 1e3*(time.time() - start_time)
             yield outputs
