@@ -44,23 +44,25 @@ Deep Pictorial Gaze Estimation
 
 ## Installing dependencies
 
-Run (with `sudo` appended if necessary),
+Follow [these instructions](https://opensource.com/article/20/4/install-python-linux) to download Python 3.7
+
+Use python virtual environment ([venv](https://docs.python.org/3/tutorial/venv.html)) to install python dependencies:
+
+Run the following inside `GazeML` repository root folder:
 ```
+python3.7 -m venv .venv
+source .venv/bin/activate
+```
+
+Install dependencies:
+```
+pip install --upgrade pip
+pip install cython
+pip install scipy
 python3 setup.py install
+pip install tensorflow==1.14
+pip install tensorflow-gpu==1.14
 ```
-
-Note that this can be done within a [virtual environment](https://docs.python.org/3/tutorial/venv.html). In this case, the sequence of commands would be similar to:
-```
-    mkvirtualenv -p $(which python3) myenv
-    python3 setup.py install
-```
-
-when using [virtualenvwrapper](https://virtualenvwrapper.readthedocs.io/en/latest/).
-
-### Tensorflow
-Tensorflow is assumed to be installed separately, to allow for usage of [custom wheel files](https://github.com/mind/wheels) if necessary.
-
-Please follow the official installation guide for Tensorflow [here](https://www.tensorflow.org/install/).
 
 ## Getting pre-trained weights
 To acquire the pre-trained weights provided with this repository, please run:
