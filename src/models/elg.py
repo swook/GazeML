@@ -178,7 +178,7 @@ class ELG(BaseModel):
             tensor,
             scale=True,
             center=True,
-            is_training=self.use_batch_statistics,
+            is_training=False,
             trainable=True,
             data_format=self._data_format,
             updates_collections=None,
