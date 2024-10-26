@@ -13,7 +13,7 @@ Eye region Landmarks based Gaze Estimation.
 
 > Seonwook Park, Xucong Zhang, Andreas Bulling, and Otmar Hilliges. "Learning to find eye region landmarks for remote gaze estimation in unconstrained settings." In Proceedings of the 2018 ACM Symposium on Eye Tracking Research & Applications, p. 21. ACM, 2018.
 
-- Project page: https://ait.ethz.ch/projects/2018/landmarks-gaze/
+- Project page: https://ait.ethz.ch/landmarks-gaze
 - Video: https://youtu.be/cLUHKYfZN5s
 
 ## DPG
@@ -22,7 +22,7 @@ Deep Pictorial Gaze Estimation
 
 > Seonwook Park, Adrian Spurr, and Otmar Hilliges. "Deep Pictorial Gaze Estimation". In European Conference on Computer Vision. 2018
 
-- Project page: https://ait.ethz.ch/projects/2018/pictorial-gaze
+- Project page: https://ait.ethz.ch/pictorial-gaze
 
 *To download the MPIIGaze training data, please run `bash get_mpiigaze_hdf.bash`*
 

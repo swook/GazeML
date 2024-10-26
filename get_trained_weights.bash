@@ -10,7 +10,7 @@ cd outputs
 # first_layer_stride = 3
 # num_modules        = 3
 # num_feature_maps   = 64
-wget -Nnv https://ait.ethz.ch/projects/2018/landmarks-gaze/downloads/ELG_i180x108_f60x36_n64_m3.zip
+wget -Nnv https://files.ait.ethz.ch/projects/landmarks-gaze/ELG_i180x108_f60x36_n64_m3.zip
 unzip -oq ELG_i180x108_f60x36_n64_m3.zip
 
 ## ELG model
@@ -18,5 +18,5 @@ unzip -oq ELG_i180x108_f60x36_n64_m3.zip
 # first_layer_stride = 1
 # num_modules        = 2
 # num_feature_maps   = 32
-wget -Nnv https://ait.ethz.ch/projects/2018/landmarks-gaze/downloads/ELG_i60x36_f60x36_n32_m2.zip
+wget -Nnv https://files.ait.ethz.ch/projects/landmarks-gaze/ELG_i60x36_f60x36_n32_m2.zip
 unzip -oq ELG_i60x36_f60x36_n32_m2.zip
