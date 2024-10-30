@@ -15,6 +15,10 @@ from datasources import Video, Webcam
 from models import ELG
 import util.gaze
 
+finish_thread = False
+is_shown = False
+image = None
+
 if __name__ == '__main__':
 
     # Set global log level
@@ -69,6 +73,7 @@ if __name__ == '__main__':
                                  eye_image_shape=(36, 60))
 
         # Define model
+        # CH Question: Why do videos vs webcams use different parameters?
         if args.from_video:
             model = ELG(
                 session, train_data={'videostream': data_source},
@@ -135,15 +140,17 @@ if __name__ == '__main__':
         # Begin visualization thread
         inferred_stuff_queue = queue.Queue()
 
+        # Constructs the video visualization of the output
+        # It receives the neural network output  from the inferred_stuff_queue
+
         def _visualize_output():
+            global is_shown
+            global image
+
             last_frame_index = 0
             last_frame_time = time.time()
             fps_history = []
             all_gaze_histories = []
-
-            if args.fullscreen:
-                cv.namedWindow('vis', cv.WND_PROP_FULLSCREEN)
-                cv.setWindowProperty('vis', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
 
             while True:
                 # If no output to visualize, show unannotated frame
@@ -153,12 +160,12 @@ if __name__ == '__main__':
                         next_frame = data_source._frames[next_frame_index]
                         if 'faces' in next_frame and len(next_frame['faces']) == 0:
                             if not args.headless:
-                                cv.imshow('vis', next_frame['bgr'])
+                                image = next_frame['bgr'].copy()
+                                is_shown = True
                             if args.record_video:
                                 video_out_queue.put_nowait(next_frame_index)
                             last_frame_index = next_frame_index
-                    if cv.waitKey(1) & 0xFF == ord('q'):
-                        return
+
                     continue
 
                 # Get output from neural network and visualize
@@ -172,6 +179,7 @@ if __name__ == '__main__':
 
                     # Decide which landmarks are usable
                     heatmaps_amax = np.amax(output['heatmaps'][j, :].reshape(-1, 18), axis=0)
+                    print(heatmaps_amax)
                     can_use_eye = np.all(heatmaps_amax > 0.7)
                     can_use_eyelid = np.all(heatmaps_amax[0:8] > 0.75)
                     can_use_iris = np.all(heatmaps_amax[8:16] > 0.8)
@@ -337,15 +345,15 @@ if __name__ == '__main__':
                                    fontFace=cv.FONT_HERSHEY_DUPLEX, fontScale=0.79,
                                    color=(255, 255, 255), thickness=1, lineType=cv.LINE_AA)
                         if not args.headless:
-                            cv.imshow('vis', bgr)
+                            image = bgr.copy()
+                            is_shown = True
                         last_frame_index = frame_index
 
                         # Record frame?
                         if args.record_video:
                             video_out_queue.put_nowait(frame_index)
 
-                        # Quit?
-                        if cv.waitKey(1) & 0xFF == ord('q'):
+                        if finish_thread:
                             return
 
                         # Print timings
@@ -366,9 +374,14 @@ if __name__ == '__main__':
         visualize_thread.daemon = True
         visualize_thread.start()
 
+        if args.fullscreen:
+            cv.namedWindow('vis', cv.WND_PROP_FULLSCREEN)
+            cv.setWindowProperty('vis', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
+
         # Do inference forever
         infer = model.inference_generator()
         while True:
+
             output = next(infer)
             for frame_index in np.unique(output['frame_index']):
                 if frame_index not in data_source._frames:
@@ -378,7 +391,16 @@ if __name__ == '__main__':
                     frame['time']['inference'] += output['inference_time']
                 else:
                     frame['time']['inference'] = output['inference_time']
+
+            print('Output keys\n', output.keys())
+
             inferred_stuff_queue.put_nowait(output)
+
+            if is_shown:
+                cv.imshow('vis', image)
+                is_shown = False
+                if cv.waitKey(1) & 0xFF == ord('q'):
+                    finish_thread = True
 
             if not visualize_thread.isAlive():
                 break
